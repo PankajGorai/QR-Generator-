@@ -1,0 +1,192 @@
+import java.util.*;
+import java.io.*;
+
+class Product {
+    int id;
+    String name;
+    double price;
+
+    Product(int id, String name, double price) {
+        this.id = id;
+        this.name = name;
+        this.price = price;
+    }
+
+    @Override
+    public String toString() {
+        return id + ". " + name + " - ₹" + price;
+    }
+}
+
+class Cart {
+    Map<Product, Integer> items = new HashMap<>();
+
+    void addProduct(Product product, int quantity) {
+        items.put(product, items.getOrDefault(product, 0) + quantity);
+        System.out.println(product.name + " added to cart.");
+    }
+
+    void removeProduct(Product product) {
+        if (items.containsKey(product)) {
+            items.remove(product);
+            System.out.println(product.name + " removed from cart.");
+        } else {
+            System.out.println("Product not in cart.");
+        }
+    }
+
+    void viewCart() {
+        System.out.println("\nYour Cart:");
+        double total = 0;
+
+        if (items.isEmpty()) {
+            System.out.println("Cart is empty.");
+        } else {
+            for (Map.Entry<Product, Integer> entry : items.entrySet()) {
+                Product p = entry.getKey();
+                int quantity = entry.getValue();
+                double cost = p.price * quantity;
+                total += cost;
+                System.out.println(p.name + " x " + quantity + " - ₹" + cost);
+            }
+            System.out.println("Subtotal: ₹" + total);
+            double discount = total > 10000 ? total * 0.10 : 0;
+            double delivery = total < 5000 ? 50 : 0;
+            double finalAmount = total - discount + delivery;
+            System.out.println("Discount: -₹" + discount);
+            System.out.println("Delivery Charges: ₹" + delivery);
+            System.out.println("Total Amount: ₹" + finalAmount);
+        }
+    }
+
+    void saveCartToFile(String username) throws IOException {
+        FileWriter writer = new FileWriter(username + "_cart.txt");
+        for (Map.Entry<Product, Integer> entry : items.entrySet()) {
+            Product p = entry.getKey();
+            writer.write(p.id + "," + entry.getValue() + "\n");
+        }
+        writer.close();
+    }
+
+    void loadCartFromFile(String username, List<Product> products) throws IOException {
+        File file = new File(username + "_cart.txt");
+        if (!file.exists()) return;
+
+        BufferedReader reader = new BufferedReader(new FileReader(file));
+        String line;
+        while ((line = reader.readLine()) != null) {
+            String[] parts = line.split(",");
+            int id = Integer.parseInt(parts[0]);
+            int qty = Integer.parseInt(parts[1]);
+            if (id >= 1 && id <= products.size()) {
+                addProduct(products.get(id - 1), qty);
+            }
+        }
+        reader.close();
+    }
+}
+
+public class ECommerceApp {
+    static Map<String, String> users = new HashMap<>();
+
+    static String login(Scanner scanner) {
+        System.out.println("1. Login\n2. Register");
+        System.out.print("Enter your choice: ");
+        int choice = scanner.nextInt();
+        scanner.nextLine();
+
+        System.out.print("Username: ");
+        String username = scanner.nextLine();
+
+        if (choice == 1) {
+            System.out.print("Password: ");
+            String password = scanner.nextLine();
+            if (password.equals(users.get(username))) {
+                return username;
+            } else {
+                return null;
+            }
+        } else if (choice == 2) {
+            System.out.print("Create Password: ");
+            String password = scanner.nextLine();
+            users.put(username, password);
+            return username;
+        }
+        return null;
+    }
+
+    public static void main(String[] args) throws IOException {
+        Scanner scanner = new Scanner(System.in);
+        List<Product> products = Arrays.asList(
+            new Product(1, "Laptop", 55000),
+            new Product(2, "Smartphone", 25000),
+            new Product(3, "Headphones", 2000),
+            new Product(4, "Smartwatch", 5000)
+        );
+
+        System.out.println("=== Welcome to E-Commerce App ===");
+        String username = login(scanner);
+        if (username == null) {
+            System.out.println("Login failed!");
+            return;
+        }
+
+        Cart cart = new Cart();
+        cart.loadCartFromFile(username, products);
+
+        while (true) {
+            System.out.println("\n=== Menu ===");
+            System.out.println("1. View Products");
+            System.out.println("2. Add to Cart");
+            System.out.println("3. Remove from Cart");
+            System.out.println("4. View Cart");
+            System.out.println("5. Checkout");
+            System.out.println("6. Save & Exit");
+            System.out.print("Enter your choice: ");
+
+            int choice = scanner.nextInt();
+
+            switch (choice) {
+                case 1:
+                    for (Product p : products) {
+                        System.out.println(p);
+                    }
+                    break;
+                case 2:
+                    System.out.print("Enter Product ID: ");
+                    int id = scanner.nextInt();
+                    System.out.print("Enter Quantity: ");
+                    int qty = scanner.nextInt();
+                    if (id >= 1 && id <= products.size()) {
+                        cart.addProduct(products.get(id - 1), qty);
+                    } else {
+                        System.out.println("Invalid Product ID");
+                    }
+                    break;
+                case 3:
+                    System.out.print("Enter Product ID to remove: ");
+                    int removeId = scanner.nextInt();
+                    if (removeId >= 1 && removeId <= products.size()) {
+                        cart.removeProduct(products.get(removeId - 1));
+                    } else {
+                        System.out.println("Invalid Product ID");
+                    }
+                    break;
+                case 4:
+                    cart.viewCart();
+                    break;
+                case 5:
+                    cart.viewCart();
+                    System.out.println("Checkout complete! Thank you for shopping.");
+                    cart.saveCartToFile(username);
+                    return;
+                case 6:
+                    cart.saveCartToFile(username);
+                    System.out.println("Cart saved. Goodbye!");
+                    return;
+                default:
+                    System.out.println("Invalid choice.");
+            }
+        }
+    }
+}
